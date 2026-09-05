@@ -1,0 +1,55 @@
+{
+  "updatedAt": "2026-09-05T17:00:00.000Z",
+  "updatedAtDenver": "Sat, Sep 5, 2026, 11:00 AM MT",
+  "note": "SAMPLE / PLACEHOLDER DATA — not live GasBuddy prices. Replace via the Grok Bot scrape routine.",
+  "regular": {
+    "station": "Sample Cheap Gas - Arapahoe",
+    "brand": "Shell",
+    "address": "8500 E Arapahoe Rd",
+    "city": "Centennial",
+    "price": 2.799,
+    "reported": "2 hours ago",
+    "url": "https://www.gasbuddy.com/"
+  },
+  "premium": {
+    "station": "Sample Premium Deal - Orchard",
+    "brand": "Costco",
+    "address": "5901 S Quebec St",
+    "city": "Greenwood Village",
+    "price": 3.299,
+    "reported": "1 hour ago",
+    "url": "https://www.gasbuddy.com/"
+  },
+  "stations": [
+    {
+      "grade": "regular",
+      "station": "Sample #2 Regular - Broadway",
+      "brand": "Sinclair",
+      "address": "5900 S Broadway",
+      "city": "Littleton",
+      "price": 2.849,
+      "reported": "3 hours ago",
+      "url": "https://www.gasbuddy.com/"
+    },
+    {
+      "grade": "regular",
+      "station": "Sample #3 Regular - County Line",
+      "brand": "Safeway",
+      "address": "6900 S Yosemite St",
+      "city": "Centennial",
+      "price": 2.899,
+      "reported": "4 hours ago",
+      "url": "https://www.gasbuddy.com/"
+    },
+    {
+      "grade": "premium",
+      "station": "Sample #2 Premium - Belleview",
+      "brand": "Kum & Go",
+      "address": "8000 E Belleview Ave",
+      "city": "Greenwood Village",
+      "price": 3.399,
+      "reported": "2 hours ago",
+      "url": "https://www.gasbuddy.com/"
+    }
+  ]
+}

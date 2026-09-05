@@ -1,0 +1,220 @@
+:root {
+  --bg: #0f172a;
+  --surface: #1e293b;
+  --surface-2: #334155;
+  --text: #f8fafc;
+  --muted: #94a3b8;
+  --regular: #16a34a;
+  --regular-dim: #14532d;
+  --premium: #2563eb;
+  --premium-dim: #1e3a8a;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --radius: 16px;
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100%;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.header {
+  background: linear-gradient(180deg, #14532d 0%, var(--bg) 100%);
+  padding: 1.25rem 1rem 0.75rem;
+}
+
+.header-inner { max-width: 40rem; margin: 0 auto; }
+
+h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.main {
+  flex: 1;
+  width: 100%;
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 0.75rem 1rem 2rem;
+}
+
+.refresh-meta {
+  margin: 0 0 0.75rem;
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.sample-banner {
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.85rem;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  border-radius: 10px;
+  color: #fbbf24;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.cards {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 560px) {
+  .cards { grid-template-columns: 1fr 1fr; }
+}
+
+.card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 1.15rem 1.1rem 1.25rem;
+  box-shadow: var(--shadow);
+  border: 1px solid transparent;
+}
+
+.card-regular { border-color: rgba(22, 163, 74, 0.35); }
+.card-premium { border-color: rgba(37, 99, 235, 0.35); }
+
+.card-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.35rem;
+}
+
+.card-regular .card-label { color: #4ade80; }
+.card-premium .card-label { color: #60a5fa; }
+
+.card-price {
+  font-size: 2.4rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  margin-bottom: 0.5rem;
+}
+
+.card-regular .card-price { color: #4ade80; }
+.card-premium .card-price { color: #93c5fd; }
+
+.card-station {
+  font-weight: 600;
+  font-size: 1.05rem;
+  margin-bottom: 0.2rem;
+}
+
+.card-address {
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.card-reported {
+  margin-top: 0.55rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.card-link {
+  display: inline-block;
+  margin-top: 0.75rem;
+  color: #86efac;
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+
+.card-premium .card-link { color: #93c5fd; }
+.card-link:hover { text-decoration: underline; }
+
+.others {
+  margin-top: 1.75rem;
+}
+
+.others h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.others-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.others-list li {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--surface-2);
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.other-meta { min-width: 0; }
+.other-name { font-weight: 600; font-size: 0.95rem; }
+.other-addr { color: var(--muted); font-size: 0.8rem; margin-top: 0.15rem; }
+.other-grade {
+  display: inline-block;
+  margin-top: 0.35rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.other-price {
+  font-weight: 700;
+  font-size: 1.15rem;
+  white-space: nowrap;
+  color: #4ade80;
+}
+.other-price.premium { color: #93c5fd; }
+
+.error {
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 10px;
+  color: #fca5a5;
+  font-size: 0.9rem;
+}
+
+.footer {
+  padding: 1rem;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.footer p { margin: 0.2rem 0; }
+.fineprint { opacity: 0.75; }
