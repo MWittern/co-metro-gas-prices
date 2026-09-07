@@ -1,30 +1,43 @@
 const COLORS = ["#7dd3fc","#fbbf24","#c084fc","#34d399"];
 const CITIES = ["Centennial","Littleton","Greenwood Village"];
-const COORDS = {
-  "shell-5901": [39.6095, -104.9596],
-  "shell-5901-s-university-blvd": [39.6095, -104.9596],
-  "shell-2410": [39.5953, -104.9588],
-  "shell-2410-e-arapahoe-rd": [39.5953, -104.9588],
-  "murphy-12022": [39.5954, -104.8470],
-  "exxon-6556": [39.5980, -104.9879],
-  "broadway-estates-6556-s-broadway": [39.5980, -104.9879],
-  "711-5898": [39.6102, -104.9879],
-  "ks-holly": [39.5714, -104.9223],
-  "711-dayton": [39.5994, -104.8753],
-  "murphy-briarwood": [39.5938, -104.8580],
-  "circle-k-#2709878-7425-e-arapahoe-rd": [39.5950, -104.8970],
-  "circle-k-7425-e-arapahoe-rd": [39.5950, -104.8970],
-  "circle-k-#2744100-8263-s-quebec-st": [39.5718, -104.9040],
-  "mobil-6515-s-broadway": [39.5990, -104.9879],
-  "shell-6200-s-santa-fe-dr": [39.6050, -105.0220],
-  "mobil-5890-s-santa-fe-dr": [39.6080, -105.0220],
-  "maverik-11901-e-arapahoe-rd": [39.5954, -104.8500]
+const CITY_CENTER = {
+  "Centennial": [39.5807, -104.8772],
+  "Littleton": [39.6133, -105.0166],
+  "Greenwood Village": [39.6172, -104.9508]
+};
+const BY_NUM = {
+  "5901": [39.6095, -104.9596],
+  "2410": [39.5953, -104.9588],
+  "12022": [39.5954, -104.8470],
+  "6556": [39.5980, -104.9879],
+  "5898": [39.6102, -104.9879],
+  "8250": [39.5714, -104.9223],
+  "6515": [39.5990, -104.9879],
+  "11005": [39.5938, -104.8580],
+  "7425": [39.5950, -104.8970],
+  "8263": [39.5718, -104.9040],
+  "6200": [39.6050, -105.0220],
+  "5890": [39.6080, -105.0220],
+  "11901": [39.5954, -104.8500],
+  "8755": [39.5951, -104.8818],
+  "250": [39.5835, -104.9870],
+  "181": [39.6138, -104.9965],
+  "2338": [39.6244, -105.0148],
+  "8020": [39.5748, -104.9879],
+  "5595": [39.6165, -104.9879],
+  "5171": [39.5952, -104.9260],
+  "10553": [39.5940, -104.8620],
+  "10210": [39.5953, -104.8680],
+  "7799": [39.5952, -104.8930],
+  "8787": [39.5848, -104.8870],
+  "7450": [39.5820, -104.9408],
+  "100": [39.6135, -104.9960]
 };
 const FALLBACK = { observations: [] };
 const KEYS = { hist: "wazegas-hist", coach: "wazegas-coach", places: "wazegas-places", lastTap: "wazegas-last" };
 let grade = "regular", hist = FALLBACK, here = null, lastTap = localStorage.getItem(KEYS.lastTap);
 
-function toast(t){ const el=document.getElementById("toast"); el.textContent=t; el.style.display="block"; setTimeout(()=>el.style.display="none",1800); }
+function toast(t){ const el=document.getElementById("toast"); el.textContent=t; el.style.display="block"; setTimeout(()=>el.style.display="none",2200); }
 function isKroger(s){ const n=(s.name||"").toLowerCase(); return n.indexOf("king soopers")!==-1 || n.indexOf("kroger")!==-1; }
 function rawPrice(s){ const v=s[grade]; return (v==null||v==="")?null:+v; }
 function priceOf(s){ const v=rawPrice(s); if(v==null) return null; return isKroger(s)?+(v-0.03).toFixed(2):v; }
@@ -34,9 +47,15 @@ function haversine(a,b){
   const x=Math.sin(dLat/2)**2+Math.cos(toR(a[0]))*Math.cos(toR(b[0]))*Math.sin(dLon/2)**2;
   return 2*R*Math.asin(Math.sqrt(x));
 }
+function pin(s){
+  const m=(s.addr||"").match(/(\d+)/);
+  if(m && BY_NUM[m[1]]) return BY_NUM[m[1]];
+  return CITY_CENTER[s.city] || null;
+}
 function miles(s){
-  if(!here || !COORDS[s.id]) return null;
-  return haversine(here, COORDS[s.id]);
+  if(!here) return null;
+  const p=pin(s); if(!p) return null;
+  return haversine(here, p);
 }
 function latest(){ return (hist.observations||[])[(hist.observations||[]).length-1]; }
 function areaStations(){
@@ -44,12 +63,15 @@ function areaStations(){
   return (o.stations||[]).filter(s=>CITIES.indexOf(s.city)!==-1);
 }
 function pricedList(){
-  return areaStations().filter(s=>priceOf(s)!=null).slice().sort((a,b)=>{
-    const dp=priceOf(a)-priceOf(b); if(Math.abs(dp)>0.0001) return dp;
-    const ma=miles(a), mb=miles(b);
-    if(ma!=null && mb!=null) return ma-mb;
-    return 0;
-  }).slice(0,4);
+  const rows=areaStations().filter(s=>priceOf(s)!=null).slice();
+  rows.sort((a,b)=>{
+    if(here){
+      const ma=miles(a), mb=miles(b);
+      if(ma!=null && mb!=null && Math.abs(ma-mb)>0.05) return ma-mb;
+    }
+    return priceOf(a)-priceOf(b);
+  });
+  return rows.slice(0,4);
 }
 function ageLabel(iso){
   if(!iso) return "Updated time unknown";
@@ -112,7 +134,7 @@ function renderPlaces(){
 function render(){
   const list=pricedList();
   const o=latest();
-  document.getElementById("stamp").textContent=ageLabel(o&&o.crawled_at);
+  document.getElementById("stamp").textContent=ageLabel(o&&o.crawled_at)+(here?" · nearest first":"");
   document.getElementById("emptyNote").textContent=list.length?"":"No "+grade+" prices in the latest crawl.";
   const root=document.getElementById("stations"); root.innerHTML="";
   list.forEach((s,i)=>{
@@ -151,15 +173,20 @@ document.getElementById("addPlace").onclick=()=>{
 };
 document.getElementById("locBtn").onclick=()=>{
   if(!navigator.geolocation){ toast("Location not available"); return; }
-  navigator.geolocation.getCurrentPosition(p=>{ here=[p.coords.latitude,p.coords.longitude]; toast("Sorted by price, then distance"); render(); }, ()=>toast("Location denied"));
-};
-document.getElementById("shareBtn").onclick=()=>{
-  const list=pricedList(); if(!list.length) return;
-  const s=list[0];
-  const text=s.name+" "+s.addr+" · "+grade+" $"+priceOf(s).toFixed(2);
-  if(navigator.share) navigator.share({text}).catch(()=>{});
-  else if(navigator.clipboard) navigator.clipboard.writeText(text).then(()=>toast("Copied"));
-  else toast(text);
+  toast("Getting location…");
+  navigator.geolocation.getCurrentPosition(
+    p=>{
+      here=[p.coords.latitude,p.coords.longitude];
+      document.getElementById("locBtn").classList.add("on");
+      toast("Nearest first");
+      render();
+    },
+    err=>{
+      const why=err&&err.code===1?"Allow location for this site in Safari Settings":"Location failed";
+      toast(why);
+    },
+    {enableHighAccuracy:true, timeout:12000, maximumAge:30000}
+  );
 };
 document.getElementById("coachOk").onclick=()=>{ localStorage.setItem(KEYS.coach,"1"); document.getElementById("coach").classList.remove("on"); };
 if(!localStorage.getItem(KEYS.coach) && !window.navigator.standalone) document.getElementById("coach").classList.add("on");
