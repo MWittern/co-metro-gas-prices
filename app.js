@@ -2,13 +2,20 @@ const COLORS = ["#7dd3fc","#fbbf24","#c084fc","#34d399"];
 const CITIES = ["Centennial","Littleton","Greenwood Village"];
 const COORDS = {
   "shell-5901": [39.6095, -104.9596],
+  "shell-5901-s-university-blvd": [39.6095, -104.9596],
   "shell-2410": [39.5953, -104.9588],
+  "shell-2410-e-arapahoe-rd": [39.5953, -104.9588],
   "murphy-12022": [39.5954, -104.8470],
   "exxon-6556": [39.5980, -104.9879],
+  "broadway-estates-6556-s-broadway": [39.5980, -104.9879],
   "711-5898": [39.6102, -104.9879],
   "ks-holly": [39.5714, -104.9223],
   "711-dayton": [39.5994, -104.8753],
-  "murphy-briarwood": [39.5938, -104.8580]
+  "murphy-briarwood": [39.5938, -104.8580],
+  "circle-k-#2709878-7425-e-arapahoe-rd": [39.5950, -104.8970],
+  "circle-k-#2744100-8263-s-quebec-st": [39.5718, -104.9040],
+  "mobil-6515-s-broadway": [39.5990, -104.9879],
+  "shell-6200-s-santa-fe-dr": [39.6050, -105.0220]
 };
 const FALLBACK = { observations: [] };
 const KEYS = { hist: "wazegas-hist", cities: "wazegas-cities", coach: "wazegas-coach", places: "wazegas-places", lastTap: "wazegas-last" };
