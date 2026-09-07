@@ -63,15 +63,7 @@ function areaStations(){
   return (o.stations||[]).filter(s=>CITIES.indexOf(s.city)!==-1);
 }
 function pricedList(){
-  const rows=areaStations().filter(s=>priceOf(s)!=null).slice();
-  rows.sort((a,b)=>{
-    if(here){
-      const ma=miles(a), mb=miles(b);
-      if(ma!=null && mb!=null && Math.abs(ma-mb)>0.05) return ma-mb;
-    }
-    return priceOf(a)-priceOf(b);
-  });
-  return rows.slice(0,4);
+  return areaStations().filter(s=>priceOf(s)!=null).slice().sort((a,b)=>priceOf(a)-priceOf(b)).slice(0,4);
 }
 function ageLabel(iso){
   if(!iso) return "Updated time unknown";
@@ -134,7 +126,7 @@ function renderPlaces(){
 function render(){
   const list=pricedList();
   const o=latest();
-  document.getElementById("stamp").textContent=ageLabel(o&&o.crawled_at)+(here?" · nearest first":"");
+  document.getElementById("stamp").textContent=ageLabel(o&&o.crawled_at);
   document.getElementById("emptyNote").textContent=list.length?"":"No "+grade+" prices in the latest crawl.";
   const root=document.getElementById("stations"); root.innerHTML="";
   list.forEach((s,i)=>{
@@ -160,6 +152,14 @@ function render(){
   drawChart(list);
   renderPlaces();
 }
+function askLocation(quiet){
+  if(!navigator.geolocation){ if(!quiet) toast("Location not available"); return; }
+  navigator.geolocation.getCurrentPosition(
+    p=>{ here=[p.coords.latitude,p.coords.longitude]; render(); },
+    err=>{ if(!quiet) toast(err&&err.code===1?"Allow location in Safari Settings":"Location failed"); },
+    {enableHighAccuracy:true, timeout:12000, maximumAge:60000}
+  );
+}
 document.getElementById("btnReg").onclick=()=>{ grade="regular"; document.getElementById("btnReg").classList.add("on"); document.getElementById("btnPrem").classList.remove("on"); render(); };
 document.getElementById("btnPrem").onclick=()=>{ grade="premium"; document.getElementById("btnPrem").classList.add("on"); document.getElementById("btnReg").classList.remove("on"); render(); };
 document.getElementById("editBtn").onclick=()=>document.getElementById("editBox").classList.toggle("on");
@@ -171,23 +171,7 @@ document.getElementById("addPlace").onclick=()=>{
   raw.push({label,query}); localStorage.setItem(KEYS.places, JSON.stringify(raw));
   document.getElementById("label").value=""; document.getElementById("query").value=""; renderPlaces();
 };
-document.getElementById("locBtn").onclick=()=>{
-  if(!navigator.geolocation){ toast("Location not available"); return; }
-  toast("Getting location…");
-  navigator.geolocation.getCurrentPosition(
-    p=>{
-      here=[p.coords.latitude,p.coords.longitude];
-      document.getElementById("locBtn").classList.add("on");
-      toast("Nearest first");
-      render();
-    },
-    err=>{
-      const why=err&&err.code===1?"Allow location for this site in Safari Settings":"Location failed";
-      toast(why);
-    },
-    {enableHighAccuracy:true, timeout:12000, maximumAge:30000}
-  );
-};
+document.getElementById("locBtn").onclick=()=>askLocation(false);
 document.getElementById("coachOk").onclick=()=>{ localStorage.setItem(KEYS.coach,"1"); document.getElementById("coach").classList.remove("on"); };
 if(!localStorage.getItem(KEYS.coach) && !window.navigator.standalone) document.getElementById("coach").classList.add("on");
 
@@ -213,6 +197,7 @@ function load(toastOn){
       apply(cached?JSON.parse(cached):FALLBACK);
     }
     if(toastOn) toast("Updated");
+    askLocation(true);
   }).catch(()=>{
     const cached=localStorage.getItem(KEYS.hist);
     apply(cached?JSON.parse(cached):FALLBACK);
