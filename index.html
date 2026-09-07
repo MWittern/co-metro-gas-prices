@@ -1,64 +1,57 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#16a34a" />
-  <meta name="description" content="Cheapest regular and premium gas prices in Centennial, Greenwood Village, and Littleton, Colorado." />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="CO Gas" />
-  <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
-  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <meta name="apple-mobile-web-app-title" content="Waze Gas" />
+  <meta name="theme-color" content="#0b1220" />
+  <link rel="manifest" href="manifest.json" />
+  <title>Waze Gas</title>
   <link rel="stylesheet" href="styles.css" />
-  <title>CO Metro Gas Prices</title>
 </head>
 <body>
-  <header class="header">
-    <div class="header-inner">
-      <h1>CO Metro Gas</h1>
-      <p class="subtitle">Centennial · Greenwood Village · Littleton</p>
+  <div class="top">
+    <h1>Waze Gas</h1>
+    <div class="seg">
+      <button id="btnReg" class="on" type="button">Regular</button>
+      <button id="btnPrem" type="button">Premium</button>
     </div>
-  </header>
-
-  <main class="main">
-    <p id="refresh-meta" class="refresh-meta" aria-live="polite">Loading prices…</p>
-    <p id="sample-banner" class="sample-banner" hidden></p>
-
-    <section class="cards" aria-label="Cheapest stations">
-      <article class="card card-regular" id="card-regular">
-        <div class="card-label">Cheapest Regular</div>
-        <div class="card-price" id="regular-price">—</div>
-        <div class="card-station" id="regular-station">—</div>
-        <div class="card-address" id="regular-address">—</div>
-        <div class="card-reported" id="regular-reported"></div>
-        <a class="card-link" id="regular-link" href="#" hidden target="_blank" rel="noopener">View on GasBuddy</a>
-      </article>
-
-      <article class="card card-premium" id="card-premium">
-        <div class="card-label">Cheapest Premium</div>
-        <div class="card-price" id="premium-price">—</div>
-        <div class="card-station" id="premium-station">—</div>
-        <div class="card-address" id="premium-address">—</div>
-        <div class="card-reported" id="premium-reported"></div>
-        <a class="card-link" id="premium-link" href="#" hidden target="_blank" rel="noopener">View on GasBuddy</a>
-      </article>
-    </section>
-
-    <section class="others" id="others-section" hidden>
-      <h2>Other cheap stations</h2>
-      <ul id="others-list" class="others-list"></ul>
-    </section>
-
-    <p id="error" class="error" hidden></p>
-  </main>
-
-  <footer class="footer">
-    <p>Pull to refresh or reload for the latest snapshot.</p>
-    <p class="fineprint">Unofficial GasBuddy snapshot · not affiliated with GasBuddy</p>
-  </footer>
-
-  <script src="app.js" defer></script>
+  </div>
+  <div class="wrap" id="scroller">
+    <div class="refreshing" id="pullMsg">Release to refresh</div>
+    <div class="row" id="cities"></div>
+    <div class="actions">
+      <button class="btn" id="shareBtn" type="button">Share cheapest</button>
+      <button class="btn" id="locBtn" type="button">Use location</button>
+      <button class="btn" id="editBtn" type="button">Edit</button>
+    </div>
+    <div class="edit" id="editBox">
+      <input id="label" placeholder="Label (Work)" />
+      <input id="query" placeholder="ZIP or city" />
+      <button class="btn" id="addPlace" type="button">Save place</button>
+      <div id="placeList"></div>
+    </div>
+    <div class="g3" id="glance"></div>
+    <p class="meta" id="stamp"></p>
+    <p class="hint" id="emptyNote"></p>
+    <div id="stations"></div>
+    <details class="chart" id="chartBox">
+      <summary>10-day chart</summary>
+      <canvas id="chart" width="720" height="400"></canvas>
+      <div class="legend" id="legend"></div>
+    </details>
+    <p class="hint">Open in Safari → Share → Add to Home Screen. Next crawl 7:15am MDT.</p>
+  </div>
+  <div class="coach" id="coach">
+    <div class="card">
+      <strong>Put this on the Home Screen</strong>
+      <p class="hint">Safari only. Tap Share, then Add to Home Screen.</p>
+      <button class="btn" id="coachOk" type="button" style="width:100%;margin-top:8px">Got it</button>
+    </div>
+  </div>
+  <div id="toast"></div>
+  <script src="app.js"></script>
 </body>
 </html>
