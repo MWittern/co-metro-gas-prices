@@ -25,14 +25,25 @@ jobs:
 
           KEY = os.environ["FIRECRAWL_API_KEY"]
           CITIES = {"centennial", "littleton", "greenwood village"}
-          # Public GasBuddy HTML only. No unofficial API, no login.
           URLS = [
             "https://www.gasbuddy.com/gasprices/colorado/centennial",
             "https://www.gasbuddy.com/gasprices/colorado/littleton",
             "https://www.gasbuddy.com/gasprices/colorado/greenwood-village",
-            "https://www.gasbuddy.com/station/27835",   # Shell 5901 S University
-            "https://www.gasbuddy.com/station/160558",  # Murphy 12022 E Arapahoe
-            "https://www.gasbuddy.com/station/110924",  # King Soopers 8250 S Holly
+            "https://www.gasbuddy.com/station/27835",
+            "https://www.gasbuddy.com/station/27615",
+            "https://www.gasbuddy.com/station/160558",
+            "https://www.gasbuddy.com/station/110924",
+            "https://www.gasbuddy.com/station/209114",
+            "https://www.gasbuddy.com/station/205744",
+            "https://www.gasbuddy.com/station/16667",
+            "https://www.gasbuddy.com/station/109225",
+            "https://www.gasbuddy.com/station/44899",
+            "https://www.gasbuddy.com/station/44896",
+            "https://www.gasbuddy.com/station/44868",
+            "https://www.gasbuddy.com/station/16666",
+            "https://www.gasbuddy.com/station/40178",
+            "https://www.gasbuddy.com/station/16663",
+            "https://www.gasbuddy.com/station/403",
           ]
           STABLE = [
             ("shell-5901", "5901", "university"),
@@ -63,35 +74,40 @@ jobs:
             }
           }
 
+          def num(v):
+            if isinstance(v, (int, float)):
+              return float(v)
+            if isinstance(v, str):
+              m = re.search(r"(\d+\.\d{2,3})", v.replace(",", ""))
+              if m:
+                return float(m.group(1))
+            return None
+
           def stable_id(name, addr):
             a = (addr or "").lower()
-            for sid, num, street in STABLE:
-              if num in a and street in a:
+            for sid, n, street in STABLE:
+              if n in a and street in a:
                 return sid
             slug = re.sub(r"[^a-z0-9]+", "-", ((name or "") + "-" + (addr or "")).lower()).strip("-")
             return slug[:40]
 
           def scrape(url):
+            prompt = (
+              "This is a GasBuddy page. Extract every station visible. "
+              "On a station detail page the price row is Regular, Midgrade, Premium, Diesel. "
+              "Map Regular to regular and Premium (not midgrade, not diesel) to premium. "
+              "Use numbers only. If Premium shows blank or dash, premium is null. "
+              "Do not invent prices. Only Centennial, Littleton, Greenwood Village."
+            )
             body = json.dumps({
               "url": url,
               "formats": ["json"],
-              "jsonOptions": {
-                "schema": schema,
-                "prompt": (
-                  "Extract gas stations shown on this GasBuddy page. "
-                  "Only Centennial, Littleton, or Greenwood Village. "
-                  "Regular and premium as numbers. No diesel. No midgrade. "
-                  "If a price is missing use null. Do not invent prices."
-                ),
-              },
+              "jsonOptions": {"schema": schema, "prompt": prompt},
             }).encode()
             req = urllib.request.Request(
               "https://api.firecrawl.dev/v1/scrape",
               data=body,
-              headers={
-                "Authorization": f"Bearer {KEY}",
-                "Content-Type": "application/json",
-              },
+              headers={"Authorization": f"Bearer {KEY}", "Content-Type": "application/json"},
               method="POST",
             )
             with urllib.request.urlopen(req, timeout=90) as r:
@@ -104,9 +120,12 @@ jobs:
             try:
               data = scrape(url)
             except Exception as e:
-              blocked.append(f"{url}: {e}")
+              blocked.append(url.split("/")[-1] + ": " + str(e)[:80])
               continue
-            for s in data.get("stations") or []:
+            rows = data.get("stations") or []
+            if not rows and (data.get("name") or data.get("addr")):
+              rows = [data]
+            for s in rows:
               city = (s.get("city") or "").strip()
               if city.lower() not in CITIES:
                 continue
@@ -120,12 +139,16 @@ jobs:
                 "name": name,
                 "addr": addr,
                 "city": city,
-                "regular": s.get("regular"),
-                "premium": s.get("premium"),
+                "regular": num(s.get("regular")),
+                "premium": num(s.get("premium")),
                 "source": "gasbuddy",
               }
               prev = seen.get(sid)
               if prev:
+                if rec["regular"] is None:
+                  rec["regular"] = prev.get("regular")
+                if rec["premium"] is None:
+                  rec["premium"] = prev.get("premium")
                 regs = [x for x in (prev.get("regular"), rec.get("regular")) if isinstance(x, (int, float))]
                 if len(regs) == 2 and abs(regs[0] - regs[1]) > 0.009:
                   rec["conflict"] = f"${min(regs):.2f}-{max(regs):.2f}"
@@ -140,11 +163,15 @@ jobs:
             "observations": [],
           }
           now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=-6)))
+          prem = sum(1 for s in seen.values() if s.get("premium") is not None)
+          status = "ok" if seen else "blocked"
+          if seen and prem == 0:
+            status = "partial"
           obs = {
             "date": now.strftime("%Y-%m-%d"),
             "crawled_at": now.strftime("%Y-%m-%dT%H:%M:%S-06:00"),
-            "status": "ok" if seen else "blocked",
-            "note": "firecrawl+gasbuddy" + ("; blocked: " + "; ".join(blocked) if blocked else ""),
+            "status": status,
+            "note": "firecrawl+gasbuddy stations+lists; premium=%d/%d" % (prem, len(seen)) + ("; blocked: " + "; ".join(blocked) if blocked else ""),
             "stations": list(seen.values()),
           }
           tape.setdefault("observations", []).append(obs)
@@ -159,7 +186,7 @@ jobs:
             kept.append(item)
           tape["observations"] = list(reversed(kept))
           path.write_text(json.dumps(tape, indent=2) + "\n")
-          print(obs["status"], "stations", len(seen), "blocked", len(blocked))
+          print(obs["status"], "stations", len(seen), "premium", prem, "blocked", len(blocked))
           PY
       - name: Commit tape
         run: |
