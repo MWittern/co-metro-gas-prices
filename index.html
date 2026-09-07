@@ -5,15 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Waze Gas" />
+  <meta name="apple-mobile-web-app-title" content="Matt's Gas" />
   <meta name="theme-color" content="#0b1220" />
   <link rel="manifest" href="manifest.json" />
-  <title>Waze Gas</title>
+  <link rel="apple-touch-icon" href="icons/pump.svg" />
+  <link rel="icon" href="icons/pump.svg" />
+  <title>Matt's Gas</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="top">
-    <h1>Waze Gas</h1>
+    <h1>Matt's Gas</h1>
     <div class="seg">
       <button id="btnReg" class="on" type="button">Regular</button>
       <button id="btnPrem" type="button">Premium</button>
@@ -21,7 +23,6 @@
   </div>
   <div class="wrap" id="scroller">
     <div class="refreshing" id="pullMsg">Release to refresh</div>
-    <div class="row" id="cities"></div>
     <div class="actions">
       <button class="btn" id="shareBtn" type="button">Share cheapest</button>
       <button class="btn" id="locBtn" type="button">Use location</button>
@@ -33,7 +34,6 @@
       <button class="btn" id="addPlace" type="button">Save place</button>
       <div id="placeList"></div>
     </div>
-    <div class="g3" id="glance"></div>
     <p class="meta" id="stamp"></p>
     <p class="hint" id="emptyNote"></p>
     <div id="stations"></div>
@@ -42,7 +42,6 @@
       <canvas id="chart" width="720" height="400"></canvas>
       <div class="legend" id="legend"></div>
     </details>
-    <p class="hint">Open in Safari → Share → Add to Home Screen. Next crawl 7:15am MDT.</p>
   </div>
   <div class="coach" id="coach">
     <div class="card">

@@ -13,14 +13,16 @@ const COORDS = {
   "711-dayton": [39.5994, -104.8753],
   "murphy-briarwood": [39.5938, -104.8580],
   "circle-k-#2709878-7425-e-arapahoe-rd": [39.5950, -104.8970],
+  "circle-k-7425-e-arapahoe-rd": [39.5950, -104.8970],
   "circle-k-#2744100-8263-s-quebec-st": [39.5718, -104.9040],
   "mobil-6515-s-broadway": [39.5990, -104.9879],
-  "shell-6200-s-santa-fe-dr": [39.6050, -105.0220]
+  "shell-6200-s-santa-fe-dr": [39.6050, -105.0220],
+  "mobil-5890-s-santa-fe-dr": [39.6080, -105.0220],
+  "maverik-11901-e-arapahoe-rd": [39.5954, -104.8500]
 };
 const FALLBACK = { observations: [] };
-const KEYS = { hist: "wazegas-hist", cities: "wazegas-cities", coach: "wazegas-coach", places: "wazegas-places", lastTap: "wazegas-last" };
+const KEYS = { hist: "wazegas-hist", coach: "wazegas-coach", places: "wazegas-places", lastTap: "wazegas-last" };
 let grade = "regular", hist = FALLBACK, here = null, lastTap = localStorage.getItem(KEYS.lastTap);
-let onCities = JSON.parse(localStorage.getItem(KEYS.cities) || '["Centennial","Littleton","Greenwood Village"]');
 
 function toast(t){ const el=document.getElementById("toast"); el.textContent=t; el.style.display="block"; setTimeout(()=>el.style.display="none",1800); }
 function isKroger(s){ const n=(s.name||"").toLowerCase(); return n.indexOf("king soopers")!==-1 || n.indexOf("kroger")!==-1; }
@@ -37,62 +39,34 @@ function miles(s){
   return haversine(here, COORDS[s.id]);
 }
 function latest(){ return (hist.observations||[])[(hist.observations||[]).length-1]; }
-function filtered(){
+function areaStations(){
   const o=latest(); if(!o) return [];
-  return (o.stations||[]).filter(s=>onCities.indexOf(s.city)!==-1);
+  return (o.stations||[]).filter(s=>CITIES.indexOf(s.city)!==-1);
 }
 function pricedList(){
-  return filtered().filter(s=>priceOf(s)!=null).slice().sort((a,b)=>{
+  return areaStations().filter(s=>priceOf(s)!=null).slice().sort((a,b)=>{
     const dp=priceOf(a)-priceOf(b); if(Math.abs(dp)>0.0001) return dp;
     const ma=miles(a), mb=miles(b);
     if(ma!=null && mb!=null) return ma-mb;
     return 0;
-  });
+  }).slice(0,4);
 }
 function ageLabel(iso){
-  if(!iso) return "crawl time unknown";
+  if(!iso) return "Updated time unknown";
   const ms=Date.now()-new Date(iso).getTime();
   const h=Math.max(0, Math.round(ms/3600000));
-  if(h<1) return "crawled just now";
-  if(h<24) return "crawled "+h+"h ago";
-  return "crawled "+Math.round(h/24)+"d ago";
+  if(h<1) return "Updated just now";
+  if(h<24) return "Updated "+h+"h ago";
+  return "Updated "+Math.round(h/24)+"d ago";
 }
 function openWaze(s){
   lastTap=s.id; localStorage.setItem(KEYS.lastTap,s.id);
   const q=encodeURIComponent((s.addr||"")+" "+(s.city||"")+" CO");
   const native="waze://?q="+q+"&navigate=yes";
-  const web="https://waze.com/ul?q="+q+"&utm_source=wazegas";
+  const web="https://waze.com/ul?q="+q+"&utm_source=mattsgas";
   setTimeout(()=>{ location.href=web; }, 700);
   location.href=native;
   render();
-}
-function renderCities(){
-  const root=document.getElementById("cities"); root.innerHTML="";
-  CITIES.forEach(c=>{
-    const b=document.createElement("button"); b.className="chip"+(onCities.indexOf(c)!==-1?" on":""); b.type="button"; b.textContent=c;
-    b.onclick=()=>{
-      if(onCities.indexOf(c)!==-1){ if(onCities.length===1) return; onCities=onCities.filter(x=>x!==c); }
-      else onCities=onCities.concat(c);
-      localStorage.setItem(KEYS.cities, JSON.stringify(onCities)); render();
-    };
-    root.appendChild(b);
-  });
-}
-function renderGlance(list){
-  const root=document.getElementById("glance"); root.innerHTML="";
-  const top=list.slice(0,3);
-  const box=document.createElement("div"); box.className="g3";
-  if(!top.length){ box.innerHTML="<div><em>No prices</em><b>—</b></div>"; root.appendChild(box); return; }
-  top.forEach(s=>{
-    const d=document.createElement("div");
-    const mi=miles(s);
-    d.innerHTML="<em></em><b></b>";
-    d.querySelector("em").textContent=s.name;
-    d.querySelector("b").textContent="$"+priceOf(s).toFixed(2)+(mi!=null?" · "+mi.toFixed(1)+"mi":"");
-    d.onclick=()=>openWaze(s);
-    box.appendChild(d);
-  });
-  root.appendChild(box);
 }
 function last10(){
   const out=[], end=new Date();
@@ -100,13 +74,12 @@ function last10(){
   return out;
 }
 function drawChart(list){
-  const ids=list.slice(0,3).map(s=>s.id);
-  if(lastTap && ids.indexOf(lastTap)===-1) ids.push(lastTap);
+  const ids=list.slice(0,4).map(s=>s.id);
   const obs=(hist.observations||[]).slice().sort((a,b)=>(a.crawled_at||a.date).localeCompare(b.crawled_at||b.date));
   const by={}; obs.forEach(o=>by[o.date]=o);
   const days=last10();
-  const series=ids.map(id=> filtered().concat(obs.flatMap(o=>o.stations||[])).find(s=>s.id===id) || {id:id,name:id,city:""});
-  const canvas=document.getElementById("chart"), ctx=canvas.getContext("2d");
+  const canvas=document.getElementById("chart"); if(!canvas) return;
+  const ctx=canvas.getContext("2d");
   const w=canvas.width,h=canvas.height; ctx.clearRect(0,0,w,h);
   const vals=[];
   days.forEach(d=>{ const o=by[d]; if(!o) return; (o.stations||[]).forEach(s=>{ if(ids.indexOf(s.id)===-1) return; const v=priceOf(s); if(v!=null) vals.push(v); }); });
@@ -118,17 +91,16 @@ function drawChart(list){
   ctx.strokeStyle="#2a3650"; ctx.fillStyle="#9aa8bd"; ctx.font="20px -apple-system,sans-serif";
   for(let i=0;i<4;i++){ const v=min+(max-min)*i/3; ctx.beginPath(); ctx.moveTo(padL,y(v)); ctx.lineTo(w-padR,y(v)); ctx.stroke(); ctx.fillText("$"+v.toFixed(2),8,y(v)+6); }
   days.forEach((d,i)=>{ if(i%2===0||i===days.length-1) ctx.fillText(d.slice(5),x(i)-20,h-8); });
-  series.forEach((s,idx)=>{
+  list.forEach((s,idx)=>{
     const color=COLORS[idx%COLORS.length]; ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=2;
     let started=false; ctx.beginPath();
     days.forEach((d,i)=>{ const o=by[d]; const hit=o&&(o.stations||[]).find(r=>r.id===s.id); const v=hit?priceOf(hit):null; if(v==null){ started=false; return; } if(!started){ ctx.moveTo(x(i),y(v)); started=true; } else ctx.lineTo(x(i),y(v)); }); ctx.stroke();
-    days.forEach((d,i)=>{ const o=by[d]; const hit=o&&(o.stations||[]).find(r=>r.id===s.id); const v=hit?priceOf(hit):null; if(v==null) return; ctx.beginPath(); ctx.arc(x(i),y(v),5,0,Math.PI*2); ctx.fill(); });
   });
-  document.getElementById("legend").innerHTML=series.map((s,i)=>'<span><i class="sw" style="background:'+COLORS[i]+'"></i>'+s.name+"</span>").join("");
+  document.getElementById("legend").innerHTML=list.map((s,i)=>'<span><i class="sw" style="background:'+COLORS[i]+'"></i>'+s.name+"</span>").join("");
 }
 function renderPlaces(){
   const raw=JSON.parse(localStorage.getItem(KEYS.places)||"[]");
-  const root=document.getElementById("placeList"); root.innerHTML="";
+  const root=document.getElementById("placeList"); if(!root) return; root.innerHTML="";
   raw.forEach((p)=>{
     const row=document.createElement("div"); row.className="station";
     row.innerHTML="<div><strong></strong><div class='addr'></div></div>";
@@ -138,23 +110,19 @@ function renderPlaces(){
   });
 }
 function render(){
-  renderCities();
   const list=pricedList();
   const o=latest();
-  document.getElementById("stamp").textContent=ageLabel(o&&o.crawled_at)+" · next 7:15am MDT"+(o&&o.note?" · "+o.note:"");
-  const missing=filtered().filter(s=>rawPrice(s)==null).length;
-  document.getElementById("emptyNote").textContent=grade==="premium" && missing? missing+" station"+(missing===1?"":"s")+" have no premium report." : "";
-  renderGlance(list);
+  document.getElementById("stamp").textContent=ageLabel(o&&o.crawled_at);
+  document.getElementById("emptyNote").textContent=list.length?"":"No "+grade+" prices in the latest crawl.";
   const root=document.getElementById("stations"); root.innerHTML="";
-  const crawled=o&&o.crawled_at? (Date.now()-new Date(o.crawled_at).getTime())/3600000 : 0;
   list.forEach((s,i)=>{
     const el=document.createElement("div");
-    el.className="station"+(i===0?" best":"")+(crawled>20?" stale":"");
+    el.className="station"+(i===0?" best":"");
     const copy=document.createElement("div");
     const name=document.createElement("strong"); name.textContent=s.name;
     const addr=document.createElement("div"); addr.className="addr";
     const mi=miles(s);
-    addr.textContent=s.addr+" · "+s.city+(mi!=null?" · "+mi.toFixed(1)+" mi":"")+(s.source?" · "+s.source:"");
+    addr.textContent=s.addr+" · "+s.city+(mi!=null?" · "+mi.toFixed(1)+" mi":"");
     copy.appendChild(name); copy.appendChild(addr);
     const right=document.createElement("div");
     const pr=document.createElement("div"); pr.className="price"; pr.textContent=s.conflict ? s.conflict : "$"+priceOf(s).toFixed(2);
