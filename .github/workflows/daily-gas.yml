@@ -10,24 +10,39 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Scrape and append observation
+      - name: Scrape GasBuddy and append observation
         env:
           FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
         run: |
           set -euo pipefail
           if [ -z "${FIRECRAWL_API_KEY:-}" ]; then
-            echo "Add repo secret FIRECRAWL_API_KEY (Settings → Secrets and variables → Actions)"
+            echo "Add repo secret FIRECRAWL_API_KEY"
             exit 1
           fi
           python3 << 'PY'
-          import json, os, urllib.request, datetime
+          import json, os, re, urllib.request, datetime
           from pathlib import Path
 
           KEY = os.environ["FIRECRAWL_API_KEY"]
+          CITIES = {"centennial", "littleton", "greenwood village"}
+          # Public GasBuddy HTML only. No unofficial API, no login.
           URLS = [
-            "https://www.newsbreak.com/centennial-co/gas",
-            "https://www.newsbreak.com/littleton-co/gas",
-            "https://www.newsbreak.com/greenwood-village-co/gas",
+            "https://www.gasbuddy.com/gasprices/colorado/centennial",
+            "https://www.gasbuddy.com/gasprices/colorado/littleton",
+            "https://www.gasbuddy.com/gasprices/colorado/greenwood-village",
+            "https://www.gasbuddy.com/station/27835",   # Shell 5901 S University
+            "https://www.gasbuddy.com/station/160558",  # Murphy 12022 E Arapahoe
+            "https://www.gasbuddy.com/station/110924",  # King Soopers 8250 S Holly
+          ]
+          STABLE = [
+            ("shell-5901", "5901", "university"),
+            ("shell-2410", "2410", "arapahoe"),
+            ("murphy-12022", "12022", "arapahoe"),
+            ("exxon-6556", "6556", "broadway"),
+            ("711-5898", "5898", "broadway"),
+            ("ks-holly", "8250", "holly"),
+            ("711-dayton", "6515", "dayton"),
+            ("murphy-briarwood", "11005", "briarwood"),
           ]
           schema = {
             "type": "object",
@@ -47,17 +62,28 @@ jobs:
               }
             }
           }
-          cities = {"centennial", "littleton", "greenwood village"}
-          seen = {}
-          blocked = []
-          for url in URLS:
+
+          def stable_id(name, addr):
+            a = (addr or "").lower()
+            for sid, num, street in STABLE:
+              if num in a and street in a:
+                return sid
+            slug = re.sub(r"[^a-z0-9]+", "-", ((name or "") + "-" + (addr or "")).lower()).strip("-")
+            return slug[:40]
+
+          def scrape(url):
             body = json.dumps({
               "url": url,
               "formats": ["json"],
               "jsonOptions": {
                 "schema": schema,
-                "prompt": "Extract gas stations in Centennial, Littleton, or Greenwood Village only. Regular and premium prices as numbers. No diesel. Skip stations outside those three cities."
-              }
+                "prompt": (
+                  "Extract gas stations shown on this GasBuddy page. "
+                  "Only Centennial, Littleton, or Greenwood Village. "
+                  "Regular and premium as numbers. No diesel. No midgrade. "
+                  "If a price is missing use null. Do not invent prices."
+                ),
+              },
             }).encode()
             req = urllib.request.Request(
               "https://api.firecrawl.dev/v1/scrape",
@@ -68,35 +94,47 @@ jobs:
               },
               method="POST",
             )
+            with urllib.request.urlopen(req, timeout=90) as r:
+              payload = json.loads(r.read().decode())
+            return (payload.get("data") or {}).get("json") or {}
+
+          seen = {}
+          blocked = []
+          for url in URLS:
             try:
-              with urllib.request.urlopen(req, timeout=90) as r:
-                payload = json.loads(r.read().decode())
+              data = scrape(url)
             except Exception as e:
               blocked.append(f"{url}: {e}")
               continue
-            data = (payload.get("data") or {}).get("json") or {}
             for s in data.get("stations") or []:
               city = (s.get("city") or "").strip()
-              if city.lower() not in cities:
+              if city.lower() not in CITIES:
                 continue
               name = (s.get("name") or "").strip()
               addr = (s.get("addr") or "").strip()
               if not name or not addr:
                 continue
-              sid = (name + "-" + addr).lower().replace(" ", "-")[:40]
-              seen[sid] = {
+              sid = stable_id(name, addr)
+              rec = {
                 "id": sid,
                 "name": name,
                 "addr": addr,
                 "city": city,
                 "regular": s.get("regular"),
                 "premium": s.get("premium"),
-                "source": "firecrawl+newsbreak",
+                "source": "gasbuddy",
               }
+              prev = seen.get(sid)
+              if prev:
+                regs = [x for x in (prev.get("regular"), rec.get("regular")) if isinstance(x, (int, float))]
+                if len(regs) == 2 and abs(regs[0] - regs[1]) > 0.009:
+                  rec["conflict"] = f"${min(regs):.2f}-{max(regs):.2f}"
+                  rec["source"] = "gasbuddy conflict"
+              seen[sid] = rec
 
           path = Path("gas-history.json")
           tape = json.loads(path.read_text()) if path.exists() else {
-            "source": "observed public listings only",
+            "source": "observed GasBuddy public listings only",
             "area": "Centennial, Littleton, Greenwood Village",
             "grades": ["regular", "premium"],
             "observations": [],
@@ -106,12 +144,11 @@ jobs:
             "date": now.strftime("%Y-%m-%d"),
             "crawled_at": now.strftime("%Y-%m-%dT%H:%M:%S-06:00"),
             "status": "ok" if seen else "blocked",
-            "note": "firecrawl daily" + ("; blocked: " + "; ".join(blocked) if blocked else ""),
+            "note": "firecrawl+gasbuddy" + ("; blocked: " + "; ".join(blocked) if blocked else ""),
             "stations": list(seen.values()),
           }
           tape.setdefault("observations", []).append(obs)
-          dates = []
-          kept = []
+          dates, kept = [], []
           for item in reversed(tape["observations"]):
             if item.get("date") in dates:
               kept.append(item)
@@ -130,5 +167,5 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add gas-history.json
           git diff --cached --quiet && echo "no change" && exit 0
-          git commit -m "Daily observed gas crawl"
+          git commit -m "Daily observed GasBuddy crawl"
           git push
