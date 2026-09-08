@@ -2,6 +2,7 @@ name: daily-gas-crawl
 on:
   schedule:
     - cron: "15 13 * * *"   # 07:15 America/Denver (MDT = UTC-6)
+    - cron: "15 23 * * *"   # 17:15 America/Denver
   workflow_dispatch: {}
 permissions:
   contents: write
@@ -20,7 +21,7 @@ jobs:
             exit 1
           fi
           python3 << 'PY'
-          import json, os, re, urllib.request, datetime
+          import json, os, re, time, urllib.request, datetime
           from pathlib import Path
 
           KEY = os.environ["FIRECRAWL_API_KEY"]
@@ -121,6 +122,7 @@ jobs:
               data = scrape(url)
             except Exception as e:
               blocked.append(url.split("/")[-1] + ": " + str(e)[:80])
+              time.sleep(8)
               continue
             rows = data.get("stations") or []
             if not rows and (data.get("name") or data.get("addr")):
@@ -154,6 +156,7 @@ jobs:
                   rec["conflict"] = f"${min(regs):.2f}-{max(regs):.2f}"
                   rec["source"] = "gasbuddy conflict"
               seen[sid] = rec
+            time.sleep(5)
 
           path = Path("gas-history.json")
           tape = json.loads(path.read_text()) if path.exists() else {
