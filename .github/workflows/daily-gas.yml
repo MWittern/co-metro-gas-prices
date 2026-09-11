@@ -1,13 +1,14 @@
 name: daily-gas-crawl
+# DISABLED: local MattFetch on the Mac now owns the twice-daily scrape.
+# Kept here as a manual fallback. Re-enable by removing the leading underscore
+# from the filename (or restoring schedule) if the Mac is offline.
 on:
-  schedule:
-    - cron: "15 13 * * *"   # 07:15 America/Denver (MDT = UTC-6)
-    - cron: "15 23 * * *"   # 17:15 America/Denver
   workflow_dispatch: {}
 permissions:
   contents: write
 jobs:
   crawl:
+    if: false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -49,6 +50,7 @@ jobs:
           STABLE = [
             ("shell-5901", "5901", "university"),
             ("shell-2410", "2410", "arapahoe"),
+            ("shell-8020", "8020", "broadway"),
             ("murphy-12022", "12022", "arapahoe"),
             ("exxon-6556", "6556", "broadway"),
             ("711-5898", "5898", "broadway"),
@@ -108,7 +110,7 @@ jobs:
             req = urllib.request.Request(
               "https://api.firecrawl.dev/v1/scrape",
               data=body,
-              headers={"Authorization": f"Bearer {KEY}", "Content-Type": "application/json"},
+              headers={"Authorization": f"Bearer {KEY}", "Content-Type": "json"},
               method="POST",
             )
             with urllib.request.urlopen(req, timeout=90) as r:
